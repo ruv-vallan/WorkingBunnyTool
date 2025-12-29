@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   User,
   Mail,
@@ -6,8 +6,10 @@ import {
   Building,
   Save,
   Camera,
+  Trash2,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import ImageCropper from '../components/common/ImageCropper';
 
 export default function ProfilePage() {
   const { currentUser, updateProfile } = useAuthStore();
@@ -21,6 +23,9 @@ export default function ProfilePage() {
     bio: currentUser?.bio || '',
   });
   const [saved, setSaved] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -38,6 +43,46 @@ export default function ProfilePage() {
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setSelectedImage(ev.target?.result as string);
+        setShowCropper(true);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleCropComplete = (croppedImage: string) => {
+    if (currentUser) {
+      updateProfile(currentUser.id, { avatar: croppedImage });
+    }
+    setShowCropper(false);
+    setSelectedImage(null);
+  };
+
+  const handleRemoveAvatar = () => {
+    if (currentUser && window.confirm('프로필 사진을 삭제하시겠습니까?')) {
+      updateProfile(currentUser.id, { avatar: '' });
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case 'admin': return '관리자';
+      case 'manager': return '매니저';
+      case 'member': return '팀원';
+      case 'guest': return '게스트';
+      default: return role;
+    }
+  };
+
   if (!currentUser) return null;
 
   return (
@@ -47,20 +92,59 @@ export default function ProfilePage() {
       <div className="card p-8">
         {/* Avatar Section */}
         <div className="flex items-center mb-8">
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-primary-500 text-white text-3xl flex items-center justify-center font-medium">
-              {formData.name.charAt(0)}
-            </div>
-            <button className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center border border-gray-200 hover:bg-gray-50">
+          <div className="relative group">
+            {currentUser.avatar ? (
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-24 h-24 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-primary-500 text-white text-3xl flex items-center justify-center font-medium">
+                {formData.name.charAt(0)}
+              </div>
+            )}
+
+            {/* Camera Button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center border border-gray-200 hover:bg-gray-50"
+              title="사진 변경"
+            >
               <Camera className="w-4 h-4 text-gray-600" />
             </button>
+
+            {/* Remove Button (shown on hover if avatar exists) */}
+            {currentUser.avatar && (
+              <button
+                onClick={handleRemoveAvatar}
+                className="absolute top-0 right-0 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                title="사진 삭제"
+              >
+                <Trash2 className="w-3 h-3 text-white" />
+              </button>
+            )}
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
           </div>
           <div className="ml-6">
             <h2 className="text-xl font-semibold text-gray-900">
               {formData.name}
             </h2>
-            <p className="text-gray-600">{formData.role}</p>
+            <p className="text-gray-600">{getRoleLabel(currentUser.role)}</p>
             <p className="text-sm text-gray-500">{formData.department}</p>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="mt-2 text-sm text-primary-600 hover:text-primary-700"
+            >
+              프로필 사진 변경
+            </button>
           </div>
         </div>
 
@@ -135,12 +219,11 @@ export default function ProfilePage() {
             </label>
             <input
               type="text"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              disabled={!isEditing}
-              className={`input-field ${!isEditing && 'bg-gray-50'}`}
+              value={getRoleLabel(currentUser.role)}
+              disabled
+              className="input-field bg-gray-50 cursor-not-allowed"
             />
+            <p className="text-xs text-gray-500 mt-1">역할은 관리자만 변경할 수 있습니다</p>
           </div>
 
           <div>
@@ -223,6 +306,19 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Image Cropper Modal */}
+      {showCropper && selectedImage && (
+        <ImageCropper
+          imageSrc={selectedImage}
+          onCropComplete={handleCropComplete}
+          onCancel={() => {
+            setShowCropper(false);
+            setSelectedImage(null);
+          }}
+          aspectRatio={1}
+        />
+      )}
     </div>
   );
 }

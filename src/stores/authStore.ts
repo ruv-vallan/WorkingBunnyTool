@@ -40,7 +40,7 @@ const adminPermissions: UserPermissions = {
 
 const defaultTeamSettings: TeamSettings = {
   id: 'team-1',
-  name: 'TeamFlow',
+  name: 'BunnySpace',
   logo: '',
   primaryColor: '#0073ea',
   createdAt: new Date(),
@@ -49,14 +49,14 @@ const defaultTeamSettings: TeamSettings = {
 const defaultUsers: User[] = [
   {
     id: 'admin-1',
-    email: 'admin@teamflow.com',
+    email: 'admin@bunnyspace.com',
     password: 'admin123',
     name: '관리자',
     role: 'admin',
     phone: '010-1234-5678',
     avatar: '',
     department: '경영진',
-    bio: '팀플로우 관리자입니다.',
+    bio: 'BunnySpace 관리자입니다.',
     createdAt: new Date(),
     permissions: adminPermissions,
   },
