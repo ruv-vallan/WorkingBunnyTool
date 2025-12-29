@@ -132,26 +132,32 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
 
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      // Process each image file
-      Array.from(files).forEach((file) => {
-        if (file.type.startsWith('image/')) {
+      // Collect all image files
+      const imageFiles = Array.from(files).filter((file) => file.type.startsWith('image/'));
+
+      if (imageFiles.length === 0) return;
+
+      // Process all images and add them at once
+      const promises = imageFiles.map((file) => {
+        return new Promise<DocumentBlock>((resolve) => {
           const reader = new FileReader();
           reader.onload = (ev) => {
             const imageUrl = ev.target?.result as string;
-            // Create a new image block with the dropped image
-            const newImageBlock: DocumentBlock = {
+            resolve({
               id: generateId(),
               type: 'image',
               content: '',
               alignment: 'left',
               imageUrl,
-              imageWidth: 100, // Default to 100%
-            };
-            // Add the image block at the end
-            onChange([...blocks, newImageBlock]);
+              imageWidth: 100,
+            });
           };
           reader.readAsDataURL(file);
-        }
+        });
+      });
+
+      Promise.all(promises).then((newImageBlocks) => {
+        onChange([...blocks, ...newImageBlocks]);
       });
     }
   };
@@ -880,7 +886,7 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
   };
 
   const activeBlock = activeBlockId ? blocks.find(b => b.id === activeBlockId) : null;
-  const isActiveBlockImage = activeBlock?.type === 'image' && activeBlock?.imageUrl;
+  const isActiveBlockImage = activeBlock?.type === 'image' && !!activeBlock?.imageUrl;
 
   return (
     <div
@@ -901,19 +907,20 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
         </div>
       )}
 
-      {/* Format Toolbar */}
-      {!readOnly && activeBlockId && (
+      {/* Format Toolbar - Always visible when not readOnly */}
+      {!readOnly && (
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2 mb-4 flex items-center space-x-1">
           <div className="relative">
             <button
               onClick={() => setShowFormatMenu(!showFormatMenu)}
-              className="flex items-center px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+              disabled={!activeBlockId}
+              className="flex items-center px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Type className="w-4 h-4 mr-2" />
-              {blockTypeLabels[blocks.find(b => b.id === activeBlockId)?.type || 'paragraph']}
+              {activeBlockId ? blockTypeLabels[blocks.find(b => b.id === activeBlockId)?.type || 'paragraph'] : '블록 선택'}
               <ChevronDown className="w-4 h-4 ml-2" />
             </button>
-            {showFormatMenu && (
+            {showFormatMenu && activeBlockId && (
               <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] z-20">
                 {(['paragraph', 'heading1', 'heading2', 'heading3'] as DocumentBlockType[]).map((type) => (
                   <button
@@ -939,22 +946,25 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
 
           {/* Alignment */}
           <button
-            onClick={() => updateBlock(activeBlockId, { alignment: 'left' })}
-            className={`p-1.5 rounded ${blocks.find(b => b.id === activeBlockId)?.alignment === 'left' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+            onClick={() => activeBlockId && updateBlock(activeBlockId, { alignment: 'left' })}
+            disabled={!activeBlockId}
+            className={`p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed ${activeBlockId && blocks.find(b => b.id === activeBlockId)?.alignment === 'left' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
             title="왼쪽 정렬"
           >
             <AlignLeft className="w-4 h-4" />
           </button>
           <button
-            onClick={() => updateBlock(activeBlockId, { alignment: 'center' })}
-            className={`p-1.5 rounded ${blocks.find(b => b.id === activeBlockId)?.alignment === 'center' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+            onClick={() => activeBlockId && updateBlock(activeBlockId, { alignment: 'center' })}
+            disabled={!activeBlockId}
+            className={`p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed ${activeBlockId && blocks.find(b => b.id === activeBlockId)?.alignment === 'center' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
             title="가운데 정렬"
           >
             <AlignCenter className="w-4 h-4" />
           </button>
           <button
-            onClick={() => updateBlock(activeBlockId, { alignment: 'right' })}
-            className={`p-1.5 rounded ${blocks.find(b => b.id === activeBlockId)?.alignment === 'right' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
+            onClick={() => activeBlockId && updateBlock(activeBlockId, { alignment: 'right' })}
+            disabled={!activeBlockId}
+            className={`p-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed ${activeBlockId && blocks.find(b => b.id === activeBlockId)?.alignment === 'right' ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
             title="오른쪽 정렬"
           >
             <AlignRight className="w-4 h-4" />
@@ -962,8 +972,8 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
 
           <div className="h-6 w-px bg-gray-300 mx-2" />
 
-          {/* Image Width - only show for image blocks with content */}
-          {isActiveBlockImage && (
+          {/* Image Width - show for image blocks with content */}
+          {isActiveBlockImage && activeBlock && (
             <>
               <div className="relative">
                 <button
@@ -971,7 +981,7 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
                   className="flex items-center px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
                 >
                   <ImageIcon className="w-4 h-4 mr-2" />
-                  너비: {getImageWidth(activeBlock)}%
+                  너비: {activeBlock.imageWidth || 100}%
                   <ChevronDown className="w-4 h-4 ml-2" />
                 </button>
                 {showWidthMenu && (
@@ -980,15 +990,17 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
                       <button
                         key={option.value}
                         onClick={() => {
-                          setImageWidth(activeBlockId, option.value);
+                          if (activeBlockId) {
+                            setImageWidth(activeBlockId, option.value);
+                          }
                           setShowWidthMenu(false);
                         }}
                         className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between ${
-                          getImageWidth(activeBlock) === option.value ? 'bg-gray-100' : ''
+                          (activeBlock.imageWidth || 100) === option.value ? 'bg-gray-100' : ''
                         }`}
                       >
                         {option.label}
-                        {getImageWidth(activeBlock) === option.value && (
+                        {(activeBlock.imageWidth || 100) === option.value && (
                           <span className="text-primary-500">✓</span>
                         )}
                       </button>
@@ -1003,16 +1015,59 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
           {/* Mention */}
           <button
             onClick={() => {
-              const block = blocks.find(b => b.id === activeBlockId);
-              if (block) {
-                handleContentChange(activeBlockId, block.content + '@');
+              if (activeBlockId) {
+                const block = blocks.find(b => b.id === activeBlockId);
+                if (block) {
+                  handleContentChange(activeBlockId, block.content + '@');
+                }
               }
             }}
-            className="p-1.5 rounded hover:bg-gray-100"
+            disabled={!activeBlockId}
+            className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
             title="멘션"
           >
             <AtSign className="w-4 h-4" />
           </button>
+
+          {/* Add Image Button */}
+          <div className="h-6 w-px bg-gray-300 mx-2" />
+          <label className="p-1.5 rounded hover:bg-gray-100 cursor-pointer" title="이미지 추가">
+            <ImageIcon className="w-4 h-4" />
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                  const imageFiles = Array.from(files);
+                  const promises = imageFiles.map((file) => {
+                    return new Promise<DocumentBlock>((resolve) => {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        const imageUrl = ev.target?.result as string;
+                        resolve({
+                          id: generateId(),
+                          type: 'image',
+                          content: '',
+                          alignment: 'left',
+                          imageUrl,
+                          imageWidth: 100,
+                        });
+                      };
+                      reader.readAsDataURL(file);
+                    });
+                  });
+
+                  Promise.all(promises).then((newImageBlocks) => {
+                    onChange([...blocks, ...newImageBlocks]);
+                  });
+                }
+                e.target.value = ''; // Reset input
+              }}
+            />
+          </label>
         </div>
       )}
 
