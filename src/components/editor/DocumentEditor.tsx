@@ -815,21 +815,35 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
                 >
                   <img src={block.imageUrl} alt="" className="w-full rounded-lg" />
                   {!readOnly && (
-                    <div className="absolute top-2 right-2 opacity-0 group-hover/image:opacity-100 flex space-x-1">
-                      <button
-                        onClick={() => updateBlock(block.id, { imageUrl: undefined })}
-                        className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                        title="이미지 삭제"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                  {/* Width indicator */}
-                  {!readOnly && (
-                    <div className="absolute bottom-2 left-2 opacity-0 group-hover/image:opacity-100 bg-black/60 text-white text-xs px-2 py-1 rounded">
-                      너비: {getImageWidth(block)}%
-                    </div>
+                    <>
+                      {/* Delete button */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover/image:opacity-100 flex space-x-1">
+                        <button
+                          onClick={() => updateBlock(block.id, { imageUrl: undefined })}
+                          className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                          title="이미지 삭제"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      {/* Width controls on image */}
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover/image:opacity-100 bg-black/70 rounded-lg p-1 flex items-center space-x-1">
+                        {IMAGE_WIDTH_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            onClick={() => setImageWidth(block.id, option.value)}
+                            className={`px-2 py-1 text-xs rounded transition-colors ${
+                              getImageWidth(block) === option.value
+                                ? 'bg-white text-black font-medium'
+                                : 'text-white hover:bg-white/20'
+                            }`}
+                            title={`너비 ${option.label}`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               ) : (

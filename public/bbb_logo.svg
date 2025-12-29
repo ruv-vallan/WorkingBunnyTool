@@ -1,16 +1,26 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg id="_레이어_1" data-name="레이어 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 326.35 592.2">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <style>
-      .cls-1 {
-        fill: #f3f3f3;
-      }
-    </style>
+    <linearGradient id="bunnyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0073ea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00c875;stop-opacity:1" />
+    </linearGradient>
   </defs>
-  <g id="_레이어_3" data-name="레이어 3">
-    <path class="cls-1" d="M206.31,517.13c.02-32.49,26.36-58.81,58.85-58.79,7.98,0,15.89,1.63,23.22,4.79-7.87-30.87-38-67.59-127.34-90.38,0,0,29.83-6.38,75.24,18.82,0,0,88.46-11.59,10.68-137.3,0,0-31.46-48.22-73.1-36.38,49.45-10.05,106.45-25.05,152.45-217.89,0,0-141.79,67.84-181.36,220.84,0,0-78-170-144.06-196.26,0,0-19.4,222.21,122.71,222.21,0,0-247,321.89-19.52,343.93,0,0,80,9.81,134.38-21.16-19.73-10.03-32.16-30.3-32.15-52.43ZM157.43,274.2c17.27,17.27,57.34,37,57.34,37-4.52,13.55-22.46,11.16-22.46,11.16-53.35-4.75-34.88-48.16-34.88-48.16Z"/>
-  </g>
-  <g id="_레이어_5" data-name="레이어 5">
-    <circle class="cls-1" cx="272.08" cy="514.41" r="54.27" transform="translate(-266.63 734.48) rotate(-84.35)"/>
-  </g>
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="url(#bunnyGradient)"/>
+  <!-- Bunny ears -->
+  <ellipse cx="24" cy="16" rx="6" ry="12" fill="white" opacity="0.95"/>
+  <ellipse cx="40" cy="16" rx="6" ry="12" fill="white" opacity="0.95"/>
+  <ellipse cx="24" cy="16" rx="3" ry="8" fill="#ffb6c1" opacity="0.6"/>
+  <ellipse cx="40" cy="16" rx="3" ry="8" fill="#ffb6c1" opacity="0.6"/>
+  <!-- Bunny face -->
+  <circle cx="32" cy="38" r="18" fill="white" opacity="0.95"/>
+  <!-- Eyes -->
+  <circle cx="26" cy="35" r="3" fill="#333"/>
+  <circle cx="38" cy="35" r="3" fill="#333"/>
+  <circle cx="27" cy="34" r="1" fill="white"/>
+  <circle cx="39" cy="34" r="1" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="32" cy="42" rx="3" ry="2" fill="#ffb6c1"/>
+  <!-- Mouth -->
+  <path d="M29 45 Q32 48 35 45" stroke="#333" stroke-width="1.5" fill="none"/>
 </svg>

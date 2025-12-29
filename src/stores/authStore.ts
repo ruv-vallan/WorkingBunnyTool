@@ -40,8 +40,8 @@ const adminPermissions: UserPermissions = {
 
 const defaultTeamSettings: TeamSettings = {
   id: 'team-1',
-  name: 'BunnySpace',
-  logo: '',
+  name: 'BUNNY SPACE',
+  logo: '/bbb_logo.svg',
   primaryColor: '#0073ea',
   createdAt: new Date(),
 };
