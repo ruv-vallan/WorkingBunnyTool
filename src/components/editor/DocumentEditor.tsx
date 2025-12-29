@@ -19,7 +19,11 @@ import {
   ChevronDown,
   Trash2,
   GripVertical,
+  ChevronUp,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { DocumentBlock, DocumentBlockType, ChecklistItem, TableCell } from '../../types';
 import { useAuthStore } from '../../stores/authStore';
 import { useProjectStore } from '../../stores/projectStore';
@@ -45,7 +49,15 @@ const blockTypeLabels: Record<DocumentBlockType, string> = {
   boardWidget: '보드 위젯',
 };
 
+// Block size options
+const BLOCK_SIZES = {
+  small: { label: '작게', width: '50%' },
+  medium: { label: '중간', width: '75%' },
+  large: { label: '크게', width: '100%' },
+};
+
 export default function DocumentEditor({ blocks, onChange, readOnly = false }: DocumentEditorProps) {
+  const navigate = useNavigate();
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [addMenuPosition, setAddMenuPosition] = useState<number | null>(null);
   const [showMentionMenu, setShowMentionMenu] = useState(false);
@@ -53,6 +65,9 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
   const [mentionBlockId, setMentionBlockId] = useState<string | null>(null);
   const [activeBlockId, setActiveBlockId] = useState<string | null>(null);
   const [showFormatMenu, setShowFormatMenu] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [showBlockMenu, setShowBlockMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
 
@@ -111,6 +126,59 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
     } else {
       onChange(blocks.filter(block => block.id !== id));
     }
+    setShowBlockMenu(null);
+  };
+
+  // Move block up or down
+  const moveBlock = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index > 0) {
+      const newBlocks = [...blocks];
+      [newBlocks[index], newBlocks[index - 1]] = [newBlocks[index - 1], newBlocks[index]];
+      onChange(newBlocks);
+    } else if (direction === 'down' && index < blocks.length - 1) {
+      const newBlocks = [...blocks];
+      [newBlocks[index], newBlocks[index + 1]] = [newBlocks[index + 1], newBlocks[index]];
+      onChange(newBlocks);
+    }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    const dragIndex = draggedIndex;
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newBlocks = [...blocks];
+    const [draggedBlock] = newBlocks.splice(dragIndex, 1);
+    newBlocks.splice(dropIndex, 0, draggedBlock);
+    onChange(newBlocks);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const handleContentChange = (id: string, content: string) => {
@@ -143,6 +211,73 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
     setMentionSearch('');
   };
 
+  // Handle mention click
+  const handleMentionClick = (mention: { id: string; type: 'user' | 'post' | 'project'; name: string }) => {
+    if (mention.type === 'user') {
+      // Navigate to team page to see user profile
+      navigate('/team');
+    } else if (mention.type === 'post') {
+      // Find the post and navigate to it
+      const post = posts.find(p => p.id === mention.id);
+      if (post) {
+        navigate(`/projects/${post.projectId}/posts/${post.id}`);
+      }
+    } else if (mention.type === 'project') {
+      navigate(`/projects/${mention.id}`);
+    }
+  };
+
+  // Render content with clickable mentions
+  const renderContentWithMentions = (content: string, mentions?: DocumentBlock['mentions']) => {
+    if (!mentions || mentions.length === 0) {
+      return content;
+    }
+
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let keyIndex = 0;
+
+    // Sort mentions by their appearance in content
+    const sortedMentions = [...mentions].sort((a, b) => {
+      const indexA = content.indexOf(`@${a.name}`);
+      const indexB = content.indexOf(`@${b.name}`);
+      return indexA - indexB;
+    });
+
+    for (const mention of sortedMentions) {
+      const mentionText = `@${mention.name}`;
+      const index = content.indexOf(mentionText, lastIndex);
+      if (index !== -1) {
+        // Add text before mention
+        if (index > lastIndex) {
+          parts.push(content.slice(lastIndex, index));
+        }
+        // Add clickable mention
+        parts.push(
+          <button
+            key={`mention-${keyIndex++}`}
+            onClick={() => handleMentionClick(mention)}
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-sm font-medium cursor-pointer hover:opacity-80 ${
+              mention.type === 'user' ? 'bg-blue-100 text-blue-700' :
+              mention.type === 'post' ? 'bg-green-100 text-green-700' :
+              'bg-purple-100 text-purple-700'
+            }`}
+          >
+            {mentionText}
+          </button>
+        );
+        lastIndex = index + mentionText.length;
+      }
+    }
+
+    // Add remaining text
+    if (lastIndex < content.length) {
+      parts.push(content.slice(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : content;
+  };
+
   const filteredMentions = useCallback(() => {
     const search = mentionSearch.toLowerCase();
     const userMentions = users
@@ -158,7 +293,7 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
   }, [mentionSearch, users, posts, projects]);
 
   const handleKeyDown = (e: React.KeyboardEvent, _blockId: string, index: number) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       addBlock('paragraph', index);
     }
@@ -223,6 +358,31 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
     updateBlock(blockId, { tableData: newData });
   };
 
+  const deleteTableRow = (blockId: string, rowIndex: number) => {
+    const block = blocks.find(b => b.id === blockId);
+    if (!block || !block.tableData || block.tableData.length <= 1) return;
+
+    const newData = block.tableData.filter((_, idx) => idx !== rowIndex);
+    updateBlock(blockId, { tableData: newData });
+  };
+
+  const deleteTableColumn = (blockId: string, colIndex: number) => {
+    const block = blocks.find(b => b.id === blockId);
+    if (!block || !block.tableData || block.tableData[0].length <= 1) return;
+
+    const newData = block.tableData.map(row => row.filter((_, idx) => idx !== colIndex));
+    updateBlock(blockId, { tableData: newData });
+  };
+
+  // Get block size (custom property)
+  const getBlockSize = (block: DocumentBlock): 'small' | 'medium' | 'large' => {
+    return (block as DocumentBlock & { size?: 'small' | 'medium' | 'large' }).size || 'large';
+  };
+
+  const setBlockSize = (blockId: string, size: 'small' | 'medium' | 'large') => {
+    updateBlock(blockId, { size } as Partial<DocumentBlock>);
+  };
+
   const renderBlock = (block: DocumentBlock, index: number) => {
     const alignmentClass = {
       left: 'text-left',
@@ -231,16 +391,32 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
     }[block.alignment];
 
     const isActive = activeBlockId === block.id;
+    const isDragging = draggedIndex === index;
+    const isDragOver = dragOverIndex === index;
+    const blockSize = getBlockSize(block);
+    const widthStyle = BLOCK_SIZES[blockSize].width;
 
     const commonProps = {
       onFocus: () => setActiveBlockId(block.id),
       onBlur: () => setTimeout(() => setActiveBlockId(null), 200),
     };
 
+    // Blocks that support resize
+    const resizableTypes: DocumentBlockType[] = ['table', 'image', 'boardWidget'];
+    const isResizable = resizableTypes.includes(block.type);
+
     return (
       <div
         key={block.id}
-        className={`group relative py-1 ${readOnly ? '' : 'hover:bg-gray-50'}`}
+        draggable={!readOnly}
+        onDragStart={(e) => handleDragStart(e, index)}
+        onDragOver={(e) => handleDragOver(e, index)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, index)}
+        onDragEnd={handleDragEnd}
+        className={`group relative py-1 ${readOnly ? '' : 'hover:bg-gray-50'} ${
+          isDragging ? 'opacity-50' : ''
+        } ${isDragOver ? 'border-t-2 border-primary-500' : ''}`}
       >
         {/* Block Controls */}
         {!readOnly && (
@@ -255,8 +431,42 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
             >
               <Plus className="w-4 h-4 text-gray-400" />
             </button>
-            <button className="p-1 hover:bg-gray-200 rounded cursor-grab" title="이동">
+            <button
+              className="p-1 hover:bg-gray-200 rounded cursor-grab active:cursor-grabbing"
+              title="드래그하여 이동"
+              onClick={() => setShowBlockMenu(showBlockMenu === block.id ? null : block.id)}
+            >
               <GripVertical className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+        )}
+
+        {/* Block Menu (move up/down, delete) */}
+        {!readOnly && showBlockMenu === block.id && (
+          <div className="absolute -left-16 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-20 min-w-[140px]">
+            <button
+              onClick={() => { moveBlock(index, 'up'); setShowBlockMenu(null); }}
+              disabled={index === 0}
+              className="w-full flex items-center px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronUp className="w-4 h-4 mr-2" />
+              위로 이동
+            </button>
+            <button
+              onClick={() => { moveBlock(index, 'down'); setShowBlockMenu(null); }}
+              disabled={index === blocks.length - 1}
+              className="w-full flex items-center px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronDown className="w-4 h-4 mr-2" />
+              아래로 이동
+            </button>
+            <hr className="my-1" />
+            <button
+              onClick={() => deleteBlock(block.id)}
+              className="w-full flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              삭제
             </button>
           </div>
         )}
@@ -272,216 +482,312 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
           </button>
         )}
 
+        {/* Resize controls for resizable blocks */}
+        {!readOnly && isResizable && isActive && (
+          <div className="absolute -right-8 top-8 flex flex-col space-y-1">
+            <button
+              onClick={() => setBlockSize(block.id, 'small')}
+              className={`p-1 rounded ${blockSize === 'small' ? 'bg-primary-100 text-primary-600' : 'hover:bg-gray-100 text-gray-400'}`}
+              title="작게"
+            >
+              <Minimize2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setBlockSize(block.id, 'large')}
+              className={`p-1 rounded ${blockSize === 'large' ? 'bg-primary-100 text-primary-600' : 'hover:bg-gray-100 text-gray-400'}`}
+              title="크게"
+            >
+              <Maximize2 className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Block Content */}
-        {block.type === 'paragraph' && (
-          <div className={`${alignmentClass}`}>
-            <textarea
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, block.id, index)}
-              placeholder="내용을 입력하세요..."
-              className="w-full resize-none bg-transparent focus:outline-none text-gray-800 min-h-[24px]"
-              rows={1}
-              disabled={readOnly}
-              {...commonProps}
-            />
-          </div>
-        )}
-
-        {block.type === 'heading1' && (
-          <div className={`${alignmentClass}`}>
-            <input
-              type="text"
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, block.id, index)}
-              placeholder="큰 제목"
-              className="w-full bg-transparent focus:outline-none text-3xl font-bold text-gray-900"
-              disabled={readOnly}
-              {...commonProps}
-            />
-          </div>
-        )}
-
-        {block.type === 'heading2' && (
-          <div className={`${alignmentClass}`}>
-            <input
-              type="text"
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, block.id, index)}
-              placeholder="중간 제목"
-              className="w-full bg-transparent focus:outline-none text-2xl font-semibold text-gray-900"
-              disabled={readOnly}
-              {...commonProps}
-            />
-          </div>
-        )}
-
-        {block.type === 'heading3' && (
-          <div className={`${alignmentClass}`}>
-            <input
-              type="text"
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, block.id, index)}
-              placeholder="소제목"
-              className="w-full bg-transparent focus:outline-none text-xl font-medium text-gray-900"
-              disabled={readOnly}
-              {...commonProps}
-            />
-          </div>
-        )}
-
-        {block.type === 'bulletList' && (
-          <div className={`${alignmentClass} flex items-start`}>
-            <span className="mr-2 text-gray-500">•</span>
-            <input
-              type="text"
-              value={block.content}
-              onChange={(e) => handleContentChange(block.id, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(e, block.id, index)}
-              placeholder="목록 항목"
-              className="w-full bg-transparent focus:outline-none text-gray-800"
-              disabled={readOnly}
-              {...commonProps}
-            />
-          </div>
-        )}
-
-        {block.type === 'checklist' && block.checklistItems && (
-          <div className="space-y-1">
-            {block.checklistItems.map((item) => (
-              <div key={item.id} className="flex items-center group/item">
-                <input
-                  type="checkbox"
-                  checked={item.checked}
-                  onChange={(e) => updateChecklistItem(block.id, item.id, { checked: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mr-2"
+        <div style={{ width: isResizable ? widthStyle : '100%' }}>
+          {block.type === 'paragraph' && (
+            <div className={`${alignmentClass}`}>
+              {readOnly && block.mentions && block.mentions.length > 0 ? (
+                <div className="whitespace-pre-wrap text-gray-800 min-h-[24px]">
+                  {renderContentWithMentions(block.content, block.mentions)}
+                </div>
+              ) : (
+                <textarea
+                  value={block.content}
+                  onChange={(e) => handleContentChange(block.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, block.id, index)}
+                  placeholder="내용을 입력하세요..."
+                  className="w-full resize-none bg-transparent focus:outline-none text-gray-800 min-h-[24px]"
+                  rows={1}
                   disabled={readOnly}
+                  {...commonProps}
                 />
+              )}
+            </div>
+          )}
+
+          {block.type === 'heading1' && (
+            <div className={`${alignmentClass}`}>
+              {readOnly && block.mentions && block.mentions.length > 0 ? (
+                <div className="text-3xl font-bold text-gray-900">
+                  {renderContentWithMentions(block.content, block.mentions)}
+                </div>
+              ) : (
                 <input
                   type="text"
-                  value={item.text}
-                  onChange={(e) => updateChecklistItem(block.id, item.id, { text: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addChecklistItem(block.id);
-                    } else if (e.key === 'Backspace' && item.text === '') {
-                      e.preventDefault();
-                      deleteChecklistItem(block.id, item.id);
-                    }
-                  }}
-                  placeholder="체크리스트 항목"
-                  className={`flex-1 bg-transparent focus:outline-none ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}
+                  value={block.content}
+                  onChange={(e) => handleContentChange(block.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, block.id, index)}
+                  placeholder="큰 제목"
+                  className="w-full bg-transparent focus:outline-none text-3xl font-bold text-gray-900"
                   disabled={readOnly}
+                  {...commonProps}
                 />
-                {!readOnly && (
-                  <button
-                    onClick={() => deleteChecklistItem(block.id, item.id)}
-                    className="p-1 opacity-0 group-hover/item:opacity-100 hover:bg-red-100 rounded text-red-500"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            ))}
-            {!readOnly && (
-              <button
-                onClick={() => addChecklistItem(block.id)}
-                className="text-sm text-gray-400 hover:text-gray-600 ml-6"
-              >
-                + 항목 추가
-              </button>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
-        {block.type === 'table' && block.tableData && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-200">
-              <tbody>
-                {block.tableData.map((row, rowIndex) => (
-                  <tr key={rowIndex}>
-                    {row.map((cell, colIndex) => (
-                      <td key={cell.id} className="border border-gray-200 p-2">
-                        <input
-                          type="text"
-                          value={cell.content}
-                          onChange={(e) => updateTableCell(block.id, rowIndex, colIndex, e.target.value)}
-                          className="w-full bg-transparent focus:outline-none"
-                          placeholder={rowIndex === 0 ? '제목' : '내용'}
-                          disabled={readOnly}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!readOnly && (
-              <div className="flex mt-2 space-x-2">
-                <button
-                  onClick={() => addTableRow(block.id)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  + 행 추가
-                </button>
-                <button
-                  onClick={() => addTableColumn(block.id)}
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  + 열 추가
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          {block.type === 'heading2' && (
+            <div className={`${alignmentClass}`}>
+              {readOnly && block.mentions && block.mentions.length > 0 ? (
+                <div className="text-2xl font-semibold text-gray-900">
+                  {renderContentWithMentions(block.content, block.mentions)}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={block.content}
+                  onChange={(e) => handleContentChange(block.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, block.id, index)}
+                  placeholder="중간 제목"
+                  className="w-full bg-transparent focus:outline-none text-2xl font-semibold text-gray-900"
+                  disabled={readOnly}
+                  {...commonProps}
+                />
+              )}
+            </div>
+          )}
 
-        {block.type === 'image' && (
-          <div className={`${alignmentClass}`}>
-            {block.imageUrl ? (
-              <img src={block.imageUrl} alt="" className="max-w-full rounded-lg" />
-            ) : (
-              !readOnly && (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500">
-                  <Image className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500">이미지를 업로드하세요</span>
+          {block.type === 'heading3' && (
+            <div className={`${alignmentClass}`}>
+              {readOnly && block.mentions && block.mentions.length > 0 ? (
+                <div className="text-xl font-medium text-gray-900">
+                  {renderContentWithMentions(block.content, block.mentions)}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={block.content}
+                  onChange={(e) => handleContentChange(block.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, block.id, index)}
+                  placeholder="소제목"
+                  className="w-full bg-transparent focus:outline-none text-xl font-medium text-gray-900"
+                  disabled={readOnly}
+                  {...commonProps}
+                />
+              )}
+            </div>
+          )}
+
+          {block.type === 'bulletList' && (
+            <div className={`${alignmentClass} flex items-start`}>
+              <span className="mr-2 text-gray-500">•</span>
+              {readOnly && block.mentions && block.mentions.length > 0 ? (
+                <div className="flex-1 text-gray-800">
+                  {renderContentWithMentions(block.content, block.mentions)}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={block.content}
+                  onChange={(e) => handleContentChange(block.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, block.id, index)}
+                  placeholder="목록 항목"
+                  className="w-full bg-transparent focus:outline-none text-gray-800"
+                  disabled={readOnly}
+                  {...commonProps}
+                />
+              )}
+            </div>
+          )}
+
+          {block.type === 'checklist' && block.checklistItems && (
+            <div className="space-y-1">
+              {block.checklistItems.map((item) => (
+                <div key={item.id} className="flex items-center group/item">
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                          updateBlock(block.id, { imageUrl: ev.target?.result as string });
-                        };
-                        reader.readAsDataURL(file);
+                    type="checkbox"
+                    checked={item.checked}
+                    onChange={(e) => updateChecklistItem(block.id, item.id, { checked: e.target.checked })}
+                    className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 mr-2"
+                    disabled={readOnly}
+                  />
+                  <input
+                    type="text"
+                    value={item.text}
+                    onChange={(e) => updateChecklistItem(block.id, item.id, { text: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                        e.preventDefault();
+                        addChecklistItem(block.id);
+                      } else if (e.key === 'Backspace' && item.text === '') {
+                        e.preventDefault();
+                        deleteChecklistItem(block.id, item.id);
                       }
                     }}
+                    placeholder="체크리스트 항목"
+                    className={`flex-1 bg-transparent focus:outline-none ${item.checked ? 'line-through text-gray-400' : 'text-gray-800'}`}
+                    disabled={readOnly}
                   />
-                </label>
-              )
-            )}
-          </div>
-        )}
-
-        {block.type === 'divider' && (
-          <hr className="border-t-2 border-gray-200 my-4" />
-        )}
-
-        {block.type === 'boardWidget' && (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div className="flex items-center text-gray-600">
-              <LayoutGrid className="w-5 h-5 mr-2" />
-              <span>보드 위젯</span>
+                  {!readOnly && (
+                    <button
+                      onClick={() => deleteChecklistItem(block.id, item.id)}
+                      className="p-1 opacity-0 group-hover/item:opacity-100 hover:bg-red-100 rounded text-red-500"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {!readOnly && (
+                <button
+                  onClick={() => addChecklistItem(block.id)}
+                  className="text-sm text-gray-400 hover:text-gray-600 ml-6"
+                >
+                  + 항목 추가
+                </button>
+              )}
             </div>
-            <p className="text-sm text-gray-500 mt-2">보드의 데이터를 여기에 표시합니다</p>
-          </div>
-        )}
+          )}
+
+          {block.type === 'table' && block.tableData && (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-200">
+                <tbody>
+                  {block.tableData.map((row, rowIndex) => (
+                    <tr key={rowIndex} className="group/row">
+                      {row.map((cell, colIndex) => (
+                        <td key={cell.id} className="border border-gray-200 p-2 relative">
+                          <input
+                            type="text"
+                            value={cell.content}
+                            onChange={(e) => updateTableCell(block.id, rowIndex, colIndex, e.target.value)}
+                            className="w-full bg-transparent focus:outline-none"
+                            placeholder={rowIndex === 0 ? '제목' : '내용'}
+                            disabled={readOnly}
+                          />
+                          {/* Column delete button on first row */}
+                          {!readOnly && rowIndex === 0 && block.tableData && block.tableData[0].length > 1 && (
+                            <button
+                              onClick={() => deleteTableColumn(block.id, colIndex)}
+                              className="absolute -top-3 left-1/2 -translate-x-1/2 p-0.5 bg-red-100 hover:bg-red-200 rounded text-red-600 opacity-0 group-hover:opacity-100"
+                              title="열 삭제"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </td>
+                      ))}
+                      {/* Row delete button */}
+                      {!readOnly && block.tableData && block.tableData.length > 1 && (
+                        <td className="border-none p-0 w-6">
+                          <button
+                            onClick={() => deleteTableRow(block.id, rowIndex)}
+                            className="p-0.5 hover:bg-red-100 rounded text-red-500 opacity-0 group-hover/row:opacity-100"
+                            title="행 삭제"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {!readOnly && (
+                <div className="flex mt-2 space-x-2">
+                  <button
+                    onClick={() => addTableRow(block.id)}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    + 행 추가
+                  </button>
+                  <button
+                    onClick={() => addTableColumn(block.id)}
+                    className="text-sm text-gray-500 hover:text-gray-700"
+                  >
+                    + 열 추가
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {block.type === 'image' && (
+            <div className={`${alignmentClass}`}>
+              {block.imageUrl ? (
+                <div className="relative group/image">
+                  <img src={block.imageUrl} alt="" className="max-w-full rounded-lg" />
+                  {!readOnly && (
+                    <div className="absolute top-2 right-2 opacity-0 group-hover/image:opacity-100 flex space-x-1">
+                      <button
+                        onClick={() => updateBlock(block.id, { imageUrl: undefined })}
+                        className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        title="이미지 삭제"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                !readOnly && (
+                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500">
+                    <Image className="w-8 h-8 text-gray-400 mb-2" />
+                    <span className="text-sm text-gray-500">이미지를 업로드하세요</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            updateBlock(block.id, { imageUrl: ev.target?.result as string });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                )
+              )}
+            </div>
+          )}
+
+          {block.type === 'divider' && (
+            <hr className="border-t-2 border-gray-200 my-4" />
+          )}
+
+          {block.type === 'boardWidget' && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative group/widget">
+              <div className="flex items-center text-gray-600">
+                <LayoutGrid className="w-5 h-5 mr-2" />
+                <span>보드 위젯</span>
+              </div>
+              <p className="text-sm text-gray-500 mt-2">보드의 데이터를 여기에 표시합니다</p>
+              {!readOnly && (
+                <button
+                  onClick={() => deleteBlock(block.id)}
+                  className="absolute top-2 right-2 p-1.5 bg-red-100 text-red-600 rounded hover:bg-red-200 opacity-0 group-hover/widget:opacity-100"
+                  title="위젯 삭제"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
