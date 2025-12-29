@@ -108,6 +108,7 @@ export interface DocumentBlock {
   checklistItems?: ChecklistItem[];
   tableData?: TableCell[][];
   imageUrl?: string;
+  imageWidth?: number; // Image width percentage (25, 50, 75, 100)
   linkedBoardId?: string;
   mentions?: { id: string; type: 'user' | 'post' | 'project'; name: string }[];
   size?: 'small' | 'medium' | 'large';

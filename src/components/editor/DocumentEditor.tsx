@@ -22,6 +22,7 @@ import {
   ChevronUp,
   Maximize2,
   Minimize2,
+  ImageIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DocumentBlock, DocumentBlockType, ChecklistItem, TableCell } from '../../types';
@@ -56,6 +57,14 @@ const BLOCK_SIZES = {
   large: { label: '크게', width: '100%' },
 };
 
+// Image width options (percentages)
+const IMAGE_WIDTH_OPTIONS = [
+  { value: 25, label: '25%' },
+  { value: 50, label: '50%' },
+  { value: 75, label: '75%' },
+  { value: 100, label: '100%' },
+];
+
 export default function DocumentEditor({ blocks, onChange, readOnly = false }: DocumentEditorProps) {
   const navigate = useNavigate();
   const [showAddMenu, setShowAddMenu] = useState(false);
@@ -68,8 +77,11 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [showBlockMenu, setShowBlockMenu] = useState<string | null>(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [showWidthMenu, setShowWidthMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const mentionRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const { users } = useAuthStore();
   const { posts, projects } = useProjectStore();
@@ -82,10 +94,76 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
       if (mentionRef.current && !mentionRef.current.contains(e.target as Node)) {
         setShowMentionMenu(false);
       }
+      setShowWidthMenu(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // File drag and drop handlers for the entire editor
+  const handleFileDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleFileDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Check if we're leaving the editor container
+    if (editorRef.current && !editorRef.current.contains(e.relatedTarget as Node)) {
+      setIsDraggingFile(false);
+    }
+  };
+
+  const handleFileDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+
+    if (readOnly) return;
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      // Process each image file
+      Array.from(files).forEach((file) => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const imageUrl = ev.target?.result as string;
+            // Create a new image block with the dropped image
+            const newImageBlock: DocumentBlock = {
+              id: generateId(),
+              type: 'image',
+              content: '',
+              alignment: 'left',
+              imageUrl,
+              imageWidth: 100, // Default to 100%
+            };
+            // Add the image block at the end
+            onChange([...blocks, newImageBlock]);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+  };
+
+  // Get image width (custom property)
+  const getImageWidth = (block: DocumentBlock): number => {
+    return (block as DocumentBlock & { imageWidth?: number }).imageWidth || 100;
+  };
+
+  const setImageWidth = (blockId: string, width: number) => {
+    updateBlock(blockId, { imageWidth: width } as Partial<DocumentBlock>);
+  };
 
   const createBlock = (type: DocumentBlockType): DocumentBlock => {
     const newBlock: DocumentBlock = {
@@ -725,8 +803,11 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
           {block.type === 'image' && (
             <div className={`${alignmentClass}`}>
               {block.imageUrl ? (
-                <div className="relative group/image">
-                  <img src={block.imageUrl} alt="" className="max-w-full rounded-lg" />
+                <div
+                  className="relative group/image inline-block"
+                  style={{ width: `${getImageWidth(block)}%` }}
+                >
+                  <img src={block.imageUrl} alt="" className="w-full rounded-lg" />
                   {!readOnly && (
                     <div className="absolute top-2 right-2 opacity-0 group-hover/image:opacity-100 flex space-x-1">
                       <button
@@ -738,12 +819,18 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
                       </button>
                     </div>
                   )}
+                  {/* Width indicator */}
+                  {!readOnly && (
+                    <div className="absolute bottom-2 left-2 opacity-0 group-hover/image:opacity-100 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                      너비: {getImageWidth(block)}%
+                    </div>
+                  )}
                 </div>
               ) : (
                 !readOnly && (
                   <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary-500">
                     <Image className="w-8 h-8 text-gray-400 mb-2" />
-                    <span className="text-sm text-gray-500">이미지를 업로드하세요</span>
+                    <span className="text-sm text-gray-500">이미지를 업로드하거나 드래그하세요</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -753,7 +840,7 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
                         if (file) {
                           const reader = new FileReader();
                           reader.onload = (ev) => {
-                            updateBlock(block.id, { imageUrl: ev.target?.result as string });
+                            updateBlock(block.id, { imageUrl: ev.target?.result as string, imageWidth: 100 });
                           };
                           reader.readAsDataURL(file);
                         }
@@ -792,8 +879,28 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
     );
   };
 
+  const activeBlock = activeBlockId ? blocks.find(b => b.id === activeBlockId) : null;
+  const isActiveBlockImage = activeBlock?.type === 'image' && activeBlock?.imageUrl;
+
   return (
-    <div className="relative">
+    <div
+      ref={editorRef}
+      className={`relative ${isDraggingFile ? 'ring-2 ring-primary-500 ring-offset-2 rounded-lg' : ''}`}
+      onDragEnter={handleFileDragEnter}
+      onDragLeave={handleFileDragLeave}
+      onDragOver={handleFileDragOver}
+      onDrop={handleFileDrop}
+    >
+      {/* Drag overlay */}
+      {isDraggingFile && !readOnly && (
+        <div className="absolute inset-0 bg-primary-50/80 border-2 border-dashed border-primary-500 rounded-lg flex items-center justify-center z-40 pointer-events-none">
+          <div className="text-center">
+            <ImageIcon className="w-12 h-12 text-primary-500 mx-auto mb-2" />
+            <p className="text-primary-600 font-medium">이미지를 여기에 놓으세요</p>
+          </div>
+        </div>
+      )}
+
       {/* Format Toolbar */}
       {!readOnly && activeBlockId && (
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 p-2 mb-4 flex items-center space-x-1">
@@ -854,6 +961,44 @@ export default function DocumentEditor({ blocks, onChange, readOnly = false }: D
           </button>
 
           <div className="h-6 w-px bg-gray-300 mx-2" />
+
+          {/* Image Width - only show for image blocks with content */}
+          {isActiveBlockImage && (
+            <>
+              <div className="relative">
+                <button
+                  onClick={() => setShowWidthMenu(!showWidthMenu)}
+                  className="flex items-center px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  너비: {getImageWidth(activeBlock)}%
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </button>
+                {showWidthMenu && (
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[120px] z-20">
+                    {IMAGE_WIDTH_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setImageWidth(activeBlockId, option.value);
+                          setShowWidthMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between ${
+                          getImageWidth(activeBlock) === option.value ? 'bg-gray-100' : ''
+                        }`}
+                      >
+                        {option.label}
+                        {getImageWidth(activeBlock) === option.value && (
+                          <span className="text-primary-500">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="h-6 w-px bg-gray-300 mx-2" />
+            </>
+          )}
 
           {/* Mention */}
           <button
