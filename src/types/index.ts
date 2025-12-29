@@ -110,6 +110,7 @@ export interface DocumentBlock {
   imageUrl?: string;
   linkedBoardId?: string;
   mentions?: { id: string; type: 'user' | 'post' | 'project'; name: string }[];
+  size?: 'small' | 'medium' | 'large';
 }
 
 export interface DocumentContent {
