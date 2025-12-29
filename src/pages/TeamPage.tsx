@@ -52,7 +52,8 @@ export default function TeamPage() {
 
   const handleSaveUser = () => {
     if (editingUser) {
-      updateProfile(editingUser.id, editForm);
+      const { role, ...updateData } = editForm;
+      updateProfile(editingUser.id, updateData);
       setShowEditModal(false);
       setEditingUser(null);
     }
@@ -110,7 +111,7 @@ export default function TeamPage() {
                   </span>
                 </div>
               </div>
-              {currentUser?.role === '관리자' && user.id !== currentUser?.id && (
+              {currentUser?.role === 'admin' && user.id !== currentUser?.id && (
                 <div className="relative group">
                   <button className="p-2 hover:bg-gray-100 rounded-lg">
                     <MoreVertical className="w-5 h-5 text-gray-400" />

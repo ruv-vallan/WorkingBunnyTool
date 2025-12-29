@@ -8,6 +8,9 @@ import DrivePage from './pages/DrivePage';
 import TeamPage from './pages/TeamPage';
 import ProfilePage from './pages/ProfilePage';
 import ProjectPage from './pages/ProjectPage';
+import MyWorkPage from './pages/MyWorkPage';
+import PermissionsPage from './pages/PermissionsPage';
+import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -39,10 +42,13 @@ function App() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="my-work" element={<MyWorkPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="drive" element={<DrivePage />} />
         <Route path="team" element={<TeamPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="permissions" element={<PermissionsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="project/:projectId" element={<ProjectPage />} />
         <Route path="project/:projectId/post/:postId" element={<ProjectPage />} />
       </Route>
