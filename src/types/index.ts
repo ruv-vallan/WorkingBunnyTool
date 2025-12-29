@@ -75,10 +75,47 @@ export interface BoardItem {
   order: number;
 }
 
+export type DocumentBlockType =
+  | 'paragraph'
+  | 'heading1'
+  | 'heading2'
+  | 'heading3'
+  | 'bulletList'
+  | 'checklist'
+  | 'table'
+  | 'image'
+  | 'divider'
+  | 'boardWidget';
+
+export type TextAlignment = 'left' | 'center' | 'right';
+
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  checked: boolean;
+}
+
+export interface TableCell {
+  id: string;
+  content: string;
+}
+
+export interface DocumentBlock {
+  id: string;
+  type: DocumentBlockType;
+  content: string;
+  alignment: TextAlignment;
+  checklistItems?: ChecklistItem[];
+  tableData?: TableCell[][];
+  imageUrl?: string;
+  linkedBoardId?: string;
+  mentions?: { id: string; type: 'user' | 'post' | 'project'; name: string }[];
+}
+
 export interface DocumentContent {
   id: string;
   postId: string;
-  content: string;
+  blocks: DocumentBlock[];
   updatedAt: Date;
   updatedBy: string;
 }
