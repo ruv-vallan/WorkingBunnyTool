@@ -16,7 +16,6 @@ import {
   LogOut,
   CheckSquare,
   Settings,
-  Shield,
   LayoutGrid,
   BarChart3,
   ClipboardList,
@@ -60,11 +59,6 @@ export default function Sidebar() {
     { icon: Calendar, label: '캘린더', path: '/calendar' },
     { icon: FolderOpen, label: '드라이브', path: '/drive' },
     { icon: Users, label: '팀원 관리', path: '/team' },
-  ];
-
-  const adminMenuItems = [
-    { icon: Shield, label: '권한 설정', path: '/permissions' },
-    { icon: Settings, label: '팀 설정', path: '/settings' },
   ];
 
   const toggleProject = (projectId: string) => {
@@ -189,32 +183,6 @@ export default function Sidebar() {
             </li>
           </ul>
 
-          {/* Admin Menu */}
-          {isCurrentUserAdmin && (
-            <div className="mt-4 px-2">
-              <div className="px-3 py-2 text-xs text-gray-500 uppercase tracking-wider">
-                관리자
-              </div>
-              <ul className="space-y-1">
-                {adminMenuItems.map((item) => (
-                  <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
-                        location.pathname === item.path
-                          ? 'bg-sidebar-active text-white'
-                          : 'hover:bg-sidebar-hover'
-                      }`}
-                    >
-                      <item.icon className="w-5 h-5 mr-3" />
-                      {item.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {/* Projects Section */}
           <div className="mt-6 px-2">
             <div className="flex items-center justify-between px-3 py-2 text-sm text-gray-400">
@@ -314,13 +282,38 @@ export default function Sidebar() {
           </div>
         </nav>
 
+        {/* Admin Settings - Above User Section */}
+        {isCurrentUserAdmin && (
+          <div className="px-2 pb-2">
+            <Link
+              to="/settings"
+              className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                location.pathname === '/settings'
+                  ? 'bg-sidebar-active text-white'
+                  : 'hover:bg-sidebar-hover'
+              }`}
+            >
+              <Settings className="w-5 h-5 mr-3" />
+              설정
+            </Link>
+          </div>
+        )}
+
         {/* User Section */}
         <div className="border-t border-gray-700 p-4">
           <div className="flex items-center justify-between">
             <Link to="/profile" className="flex items-center flex-1 hover:bg-sidebar-hover rounded-lg p-2 -m-2">
-              <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
-                {currentUser?.name.charAt(0)}
-              </div>
+              {currentUser?.avatar ? (
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
+                  {currentUser?.name.charAt(0)}
+                </div>
+              )}
               <div className="ml-3 flex-1 min-w-0">
                 <p className="text-sm font-medium text-white truncate">
                   {currentUser?.name}
