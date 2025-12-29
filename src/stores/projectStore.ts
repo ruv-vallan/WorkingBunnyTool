@@ -1,11 +1,24 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Project, Post, PostType } from '../types';
+import { Project, Post, PostType, DocumentBlock, BoardColumn, BoardItem } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+
+interface DocumentData {
+  postId: string;
+  blocks: DocumentBlock[];
+}
+
+interface BoardData {
+  postId: string;
+  columns: BoardColumn[];
+  items: BoardItem[];
+}
 
 interface ProjectState {
   projects: Project[];
   posts: Post[];
+  documentData: DocumentData[];
+  boardData: BoardData[];
   selectedProjectId: string | null;
   addProject: (project: Omit<Project, 'id' | 'createdAt' | 'order' | 'accessibleBy'>) => Project;
   updateProject: (id: string, data: Partial<Project>) => void;
@@ -22,6 +35,14 @@ interface ProjectState {
   setSelectedProject: (id: string | null) => void;
   updateProjectAccess: (projectId: string, userIds: string[]) => void;
   updatePostAccess: (postId: string, userIds: string[]) => void;
+  // Document data
+  getDocumentBlocks: (postId: string) => DocumentBlock[];
+  updateDocumentBlocks: (postId: string, blocks: DocumentBlock[]) => void;
+  // Board data
+  getBoardColumns: (postId: string) => BoardColumn[];
+  getBoardItems: (postId: string) => BoardItem[];
+  updateBoardColumns: (postId: string, columns: BoardColumn[]) => void;
+  updateBoardItems: (postId: string, items: BoardItem[]) => void;
 }
 
 export const useProjectStore = create<ProjectState>()(
@@ -29,6 +50,8 @@ export const useProjectStore = create<ProjectState>()(
     (set, get) => ({
       projects: [],
       posts: [],
+      documentData: [],
+      boardData: [],
       selectedProjectId: null,
 
       addProject: (projectData) => {
@@ -141,6 +164,62 @@ export const useProjectStore = create<ProjectState>()(
             p.id === postId ? { ...p, accessibleBy: userIds } : p
           ),
         }));
+      },
+
+      // Document data management
+      getDocumentBlocks: (postId) => {
+        const doc = get().documentData.find((d) => d.postId === postId);
+        return doc?.blocks || [];
+      },
+
+      updateDocumentBlocks: (postId, blocks) => {
+        set((state) => {
+          const existingIndex = state.documentData.findIndex((d) => d.postId === postId);
+          if (existingIndex >= 0) {
+            const newDocData = [...state.documentData];
+            newDocData[existingIndex] = { postId, blocks };
+            return { documentData: newDocData };
+          } else {
+            return { documentData: [...state.documentData, { postId, blocks }] };
+          }
+        });
+      },
+
+      // Board data management
+      getBoardColumns: (postId) => {
+        const board = get().boardData.find((b) => b.postId === postId);
+        return board?.columns || [];
+      },
+
+      getBoardItems: (postId) => {
+        const board = get().boardData.find((b) => b.postId === postId);
+        return board?.items || [];
+      },
+
+      updateBoardColumns: (postId, columns) => {
+        set((state) => {
+          const existingIndex = state.boardData.findIndex((b) => b.postId === postId);
+          if (existingIndex >= 0) {
+            const newBoardData = [...state.boardData];
+            newBoardData[existingIndex] = { ...newBoardData[existingIndex], columns };
+            return { boardData: newBoardData };
+          } else {
+            return { boardData: [...state.boardData, { postId, columns, items: [] }] };
+          }
+        });
+      },
+
+      updateBoardItems: (postId, items) => {
+        set((state) => {
+          const existingIndex = state.boardData.findIndex((b) => b.postId === postId);
+          if (existingIndex >= 0) {
+            const newBoardData = [...state.boardData];
+            newBoardData[existingIndex] = { ...newBoardData[existingIndex], items };
+            return { boardData: newBoardData };
+          } else {
+            return { boardData: [...state.boardData, { postId, columns: [], items }] };
+          }
+        });
       },
     }),
     {

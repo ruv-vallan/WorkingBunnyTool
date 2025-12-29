@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Plus,
   Calendar,
@@ -7,16 +7,44 @@ import {
   Trash2,
   X,
   Check,
+  ArrowLeft,
+  Edit2,
+  LayoutGrid,
+  FileText,
+  BarChart3,
+  ClipboardList,
+  GitBranch,
+  Folder,
 } from 'lucide-react';
 import { useProjectStore } from '../stores/projectStore';
 import { useAuthStore } from '../stores/authStore';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { Post } from '../types';
+import { Post, PostType } from '../types';
+import PostView from '../components/post/PostView';
+
+const postTypeIcons: Record<PostType, React.ElementType> = {
+  board: LayoutGrid,
+  document: FileText,
+  dashboard: BarChart3,
+  form: ClipboardList,
+  workflow: GitBranch,
+  folder: Folder,
+};
+
+const postTypeLabels: Record<PostType, string> = {
+  board: '보드',
+  document: 'Document',
+  dashboard: '대시보드',
+  form: '양식',
+  workflow: '워크플로우',
+  folder: '폴더',
+};
 
 export default function ProjectPage() {
-  const { projectId } = useParams();
-  const { projects, posts, addPost, updatePost, deletePost, updateProject } =
+  const { projectId, postId } = useParams();
+  const navigate = useNavigate();
+  const { projects, posts, addPost, updatePost, deletePost, updateProject, getPostById } =
     useProjectStore();
   const { users, currentUser } = useAuthStore();
 
@@ -24,6 +52,7 @@ export default function ProjectPage() {
   const projectPosts = posts
     .filter((p) => p.projectId === projectId)
     .sort((a, b) => a.order - b.order);
+  const selectedPost = postId ? getPostById(postId) : null;
 
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [showPostModal, setShowPostModal] = useState(false);
@@ -36,7 +65,9 @@ export default function ProjectPage() {
     dueDate: '',
   });
   const [editingTitle, setEditingTitle] = useState(false);
+  const [editingPostTitle, setEditingPostTitle] = useState(false);
   const [projectTitle, setProjectTitle] = useState(project?.name || '');
+  const [postTitle, setPostTitle] = useState(selectedPost?.title || '');
 
   if (!project) {
     return (
@@ -77,19 +108,6 @@ export default function ProjectPage() {
     setShowPostModal(true);
   };
 
-  const handleEditPost = (post: Post) => {
-    setEditingPost(post);
-    setPostForm({
-      title: post.title,
-      content: post.content,
-      status: post.status,
-      priority: post.priority,
-      assignees: post.assignees,
-      dueDate: post.dueDate ? format(new Date(post.dueDate), 'yyyy-MM-dd') : '',
-    });
-    setShowPostModal(true);
-  };
-
   const handleSavePost = () => {
     if (!postForm.title.trim() || !currentUser) return;
 
@@ -116,9 +134,12 @@ export default function ProjectPage() {
     setEditingPost(null);
   };
 
-  const handleDeletePost = (postId: string) => {
+  const handleDeletePost = (delPostId: string) => {
     if (window.confirm('이 게시글을 삭제하시겠습니까?')) {
-      deletePost(postId);
+      deletePost(delPostId);
+      if (postId === delPostId) {
+        navigate(`/project/${projectId}`);
+      }
     }
   };
 
@@ -127,6 +148,13 @@ export default function ProjectPage() {
       updateProject(project.id, { name: projectTitle.trim() });
     }
     setEditingTitle(false);
+  };
+
+  const handlePostTitleSave = () => {
+    if (selectedPost && postTitle.trim()) {
+      updatePost(selectedPost.id, { title: postTitle.trim() });
+    }
+    setEditingPostTitle(false);
   };
 
   const toggleAssignee = (userId: string) => {
@@ -141,6 +169,80 @@ export default function ProjectPage() {
   const getPostsByStatus = (status: Post['status']) =>
     projectPosts.filter((p) => p.status === status);
 
+  // If viewing a specific post, show the PostView
+  if (selectedPost) {
+    const PostIcon = postTypeIcons[selectedPost.type] || FileText;
+
+    return (
+      <div className="h-full flex flex-col">
+        {/* Post Header */}
+        <div className="p-4 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => navigate(`/project/${projectId}`)}
+                className="p-2 hover:bg-gray-100 rounded-lg"
+                title="프로젝트로 돌아가기"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div
+                className="w-3 h-3 rounded"
+                style={{ backgroundColor: project.color }}
+              />
+              <span className="text-sm text-gray-500">{project.name}</span>
+              <span className="text-gray-300">/</span>
+              <PostIcon className="w-5 h-5 text-gray-500" />
+              {editingPostTitle ? (
+                <input
+                  type="text"
+                  value={postTitle}
+                  onChange={(e) => setPostTitle(e.target.value)}
+                  onBlur={handlePostTitleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handlePostTitleSave();
+                    if (e.key === 'Escape') setEditingPostTitle(false);
+                  }}
+                  className="text-lg font-semibold bg-transparent border-b-2 border-primary-500 focus:outline-none"
+                  autoFocus
+                />
+              ) : (
+                <h1
+                  className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-primary-600 flex items-center"
+                  onClick={() => {
+                    setPostTitle(selectedPost.title);
+                    setEditingPostTitle(true);
+                  }}
+                >
+                  {selectedPost.title}
+                  <Edit2 className="w-4 h-4 ml-2 opacity-0 group-hover:opacity-100" />
+                </h1>
+              )}
+              <span className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">
+                {postTypeLabels[selectedPost.type]}
+              </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleDeletePost(selectedPost.id)}
+                className="p-2 hover:bg-red-100 rounded-lg text-red-500"
+                title="삭제"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Post Content */}
+        <div className="flex-1 overflow-hidden p-6">
+          <PostView post={selectedPost} />
+        </div>
+      </div>
+    );
+  }
+
+  // Project overview with task list
   return (
     <div className="p-8">
       {/* Header */}
@@ -208,14 +310,18 @@ export default function ProjectPage() {
                 const assignedUsers = users.filter((u) =>
                   post.assignees.includes(u.id)
                 );
+                const PostIcon = postTypeIcons[post.type] || FileText;
                 return (
                   <div
                     key={post.id}
                     className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
-                    onClick={() => handleEditPost(post)}
+                    onClick={() => navigate(`/project/${projectId}/post/${post.id}`)}
                   >
                     <div className="flex items-start justify-between">
-                      <h3 className="font-medium text-gray-900">{post.title}</h3>
+                      <div className="flex items-center space-x-2">
+                        <PostIcon className="w-4 h-4 text-gray-400" />
+                        <h3 className="font-medium text-gray-900">{post.title}</h3>
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
