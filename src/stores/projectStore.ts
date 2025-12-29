@@ -1,23 +1,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Project, Post } from '../types';
+import { Project, Post, PostType } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ProjectState {
   projects: Project[];
   posts: Post[];
   selectedProjectId: string | null;
-  addProject: (project: Omit<Project, 'id' | 'createdAt' | 'order'>) => Project;
+  addProject: (project: Omit<Project, 'id' | 'createdAt' | 'order' | 'accessibleBy'>) => Project;
   updateProject: (id: string, data: Partial<Project>) => void;
   deleteProject: (id: string) => void;
   reorderProjects: (projects: Project[]) => void;
-  addPost: (post: Omit<Post, 'id' | 'createdAt' | 'order'>) => Post;
+  addPost: (post: Omit<Post, 'id' | 'createdAt' | 'order' | 'accessibleBy'>) => Post;
   updatePost: (id: string, data: Partial<Post>) => void;
   deletePost: (id: string) => void;
   movePost: (postId: string, newProjectId: string) => void;
   reorderPosts: (posts: Post[]) => void;
   getPostsByProject: (projectId: string) => Post[];
+  getPostsByType: (projectId: string, type: PostType) => Post[];
+  getPostById: (postId: string) => Post | undefined;
   setSelectedProject: (id: string | null) => void;
+  updateProjectAccess: (projectId: string, userIds: string[]) => void;
+  updatePostAccess: (postId: string, userIds: string[]) => void;
 }
 
 export const useProjectStore = create<ProjectState>()(
@@ -33,6 +37,7 @@ export const useProjectStore = create<ProjectState>()(
           id: uuidv4(),
           createdAt: new Date(),
           order: get().projects.length,
+          accessibleBy: [],
         };
         set((state) => ({
           projects: [...state.projects, newProject],
@@ -70,6 +75,7 @@ export const useProjectStore = create<ProjectState>()(
           id: uuidv4(),
           createdAt: new Date(),
           order: projectPosts.length,
+          accessibleBy: [],
         };
         set((state) => ({
           posts: [...state.posts, newPost],
@@ -107,8 +113,34 @@ export const useProjectStore = create<ProjectState>()(
           .sort((a, b) => a.order - b.order);
       },
 
+      getPostsByType: (projectId, type) => {
+        return get()
+          .posts.filter((p) => p.projectId === projectId && p.type === type)
+          .sort((a, b) => a.order - b.order);
+      },
+
+      getPostById: (postId) => {
+        return get().posts.find((p) => p.id === postId);
+      },
+
       setSelectedProject: (id) => {
         set({ selectedProjectId: id });
+      },
+
+      updateProjectAccess: (projectId, userIds) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId ? { ...p, accessibleBy: userIds } : p
+          ),
+        }));
+      },
+
+      updatePostAccess: (postId, userIds) => {
+        set((state) => ({
+          posts: state.posts.map((p) =>
+            p.id === postId ? { ...p, accessibleBy: userIds } : p
+          ),
+        }));
       },
     }),
     {

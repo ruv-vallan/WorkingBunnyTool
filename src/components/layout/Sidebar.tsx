@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   Calendar,
@@ -14,28 +14,57 @@ import {
   Edit2,
   Trash2,
   LogOut,
+  CheckSquare,
+  Settings,
+  Shield,
+  LayoutGrid,
+  BarChart3,
+  ClipboardList,
+  GitBranch,
+  Folder,
 } from 'lucide-react';
 import { useProjectStore } from '../../stores/projectStore';
 import { useAuthStore } from '../../stores/authStore';
 import { useMessengerStore } from '../../stores/messengerStore';
+import { PostType } from '../../types';
+import AddPostModal from '../projects/AddPostModal';
+
+const postTypeIcons: Record<string, React.ElementType> = {
+  board: LayoutGrid,
+  document: FileText,
+  dashboard: BarChart3,
+  form: ClipboardList,
+  workflow: GitBranch,
+  folder: Folder,
+};
 
 export default function Sidebar() {
   const location = useLocation();
-  const { projects, posts, addProject, deleteProject, setSelectedProject } = useProjectStore();
-  const { currentUser, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const { projects, posts, addProject, addPost, deleteProject, setSelectedProject } = useProjectStore();
+  const { currentUser, logout, teamSettings, isAdmin } = useAuthStore();
   const { toggleMessenger, getUnreadCount } = useMessengerStore();
   const [expandedProjects, setExpandedProjects] = useState<string[]>([]);
   const [showNewProjectInput, setShowNewProjectInput] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [contextMenu, setContextMenu] = useState<{ projectId: string; x: number; y: number } | null>(null);
+  const [showAddPostModal, setShowAddPostModal] = useState(false);
+  const [selectedProjectForPost, setSelectedProjectForPost] = useState<string | null>(null);
 
   const unreadCount = currentUser ? getUnreadCount(currentUser.id) : 0;
+  const isCurrentUserAdmin = isAdmin();
 
   const menuItems = [
     { icon: Home, label: '홈', path: '/' },
+    { icon: CheckSquare, label: '내 작업', path: '/my-work' },
     { icon: Calendar, label: '캘린더', path: '/calendar' },
     { icon: FolderOpen, label: '드라이브', path: '/drive' },
     { icon: Users, label: '팀원 관리', path: '/team' },
+  ];
+
+  const adminMenuItems = [
+    { icon: Shield, label: '권한 설정', path: '/permissions' },
+    { icon: Settings, label: '팀 설정', path: '/settings' },
   ];
 
   const toggleProject = (projectId: string) => {
@@ -73,12 +102,57 @@ export default function Sidebar() {
     return posts.filter((p) => p.projectId === projectId);
   };
 
+  const handleAddPostClick = (projectId: string) => {
+    setSelectedProjectForPost(projectId);
+    setShowAddPostModal(true);
+  };
+
+  const handlePostTypeSelect = (type: PostType, title: string) => {
+    if (selectedProjectForPost && currentUser) {
+      const newPost = addPost({
+        projectId: selectedProjectForPost,
+        title,
+        content: '',
+        type,
+        status: 'todo',
+        priority: 'medium',
+        assignees: [],
+        createdBy: currentUser.id,
+      });
+      navigate(`/project/${selectedProjectForPost}/post/${newPost.id}`);
+    }
+    setShowAddPostModal(false);
+    setSelectedProjectForPost(null);
+  };
+
+  const getPostIcon = (type: PostType | undefined) => {
+    if (!type) return FileText;
+    return postTypeIcons[type] || FileText;
+  };
+
   return (
     <>
       <aside className="w-64 bg-sidebar-bg text-gray-300 flex flex-col h-screen">
         {/* Logo */}
         <div className="p-4 border-b border-gray-700">
-          <h1 className="text-xl font-bold text-white">TeamFlow</h1>
+          <Link to={isCurrentUserAdmin ? '/settings' : '/'} className="flex items-center group">
+            {teamSettings.logo ? (
+              <img src={teamSettings.logo} alt="Logo" className="w-8 h-8 rounded mr-2" />
+            ) : (
+              <div
+                className="w-8 h-8 rounded flex items-center justify-center text-white font-bold mr-2"
+                style={{ backgroundColor: teamSettings.primaryColor }}
+              >
+                {teamSettings.name.charAt(0)}
+              </div>
+            )}
+            <h1 className="text-xl font-bold text-white group-hover:text-primary-300 transition-colors">
+              {teamSettings.name}
+            </h1>
+            {isCurrentUserAdmin && (
+              <Edit2 className="w-3 h-3 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </Link>
         </div>
 
         {/* Main Navigation */}
@@ -114,6 +188,32 @@ export default function Sidebar() {
               </button>
             </li>
           </ul>
+
+          {/* Admin Menu */}
+          {isCurrentUserAdmin && (
+            <div className="mt-4 px-2">
+              <div className="px-3 py-2 text-xs text-gray-500 uppercase tracking-wider">
+                관리자
+              </div>
+              <ul className="space-y-1">
+                {adminMenuItems.map((item) => (
+                  <li key={item.path}>
+                    <Link
+                      to={item.path}
+                      className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                        location.pathname === item.path
+                          ? 'bg-sidebar-active text-white'
+                          : 'hover:bg-sidebar-hover'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5 mr-3" />
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Projects Section */}
           <div className="mt-6 px-2">
@@ -183,25 +283,28 @@ export default function Sidebar() {
                   {/* Project Posts */}
                   {expandedProjects.includes(project.id) && (
                     <ul className="ml-6 space-y-1">
-                      {getProjectPosts(project.id).map((post) => (
-                        <li key={post.id}>
-                          <Link
-                            to={`/project/${project.id}/post/${post.id}`}
-                            className="flex items-center px-3 py-1.5 rounded hover:bg-sidebar-hover text-sm"
-                          >
-                            <FileText className="w-4 h-4 mr-2" />
-                            <span className="truncate">{post.title}</span>
-                          </Link>
-                        </li>
-                      ))}
+                      {getProjectPosts(project.id).map((post) => {
+                        const PostIcon = getPostIcon(post.type);
+                        return (
+                          <li key={post.id}>
+                            <Link
+                              to={`/project/${project.id}/post/${post.id}`}
+                              className="flex items-center px-3 py-1.5 rounded hover:bg-sidebar-hover text-sm"
+                            >
+                              <PostIcon className="w-4 h-4 mr-2" />
+                              <span className="truncate">{post.title}</span>
+                            </Link>
+                          </li>
+                        );
+                      })}
                       <li>
-                        <Link
-                          to={`/project/${project.id}`}
-                          className="flex items-center px-3 py-1.5 rounded hover:bg-sidebar-hover text-sm text-gray-500"
+                        <button
+                          onClick={() => handleAddPostClick(project.id)}
+                          className="flex items-center w-full px-3 py-1.5 rounded hover:bg-sidebar-hover text-sm text-gray-500"
                         >
                           <Plus className="w-4 h-4 mr-2" />
-                          <span>게시글 추가</span>
-                        </Link>
+                          <span>항목 추가</span>
+                        </button>
                       </li>
                     </ul>
                   )}
@@ -223,7 +326,9 @@ export default function Sidebar() {
                   {currentUser?.name}
                 </p>
                 <p className="text-xs text-gray-400 truncate">
-                  {currentUser?.role}
+                  {currentUser?.role === 'admin' ? '관리자' :
+                   currentUser?.role === 'manager' ? '매니저' :
+                   currentUser?.role === 'member' ? '팀원' : '게스트'}
                 </p>
               </div>
             </Link>
@@ -271,6 +376,16 @@ export default function Sidebar() {
           </div>
         </>
       )}
+
+      {/* Add Post Modal */}
+      <AddPostModal
+        isOpen={showAddPostModal}
+        onClose={() => {
+          setShowAddPostModal(false);
+          setSelectedProjectForPost(null);
+        }}
+        onSelect={handlePostTypeSelect}
+      />
     </>
   );
 }

@@ -103,6 +103,7 @@ export default function ProjectPage() {
         projectId: project.id,
         title: postForm.title,
         content: postForm.content,
+        type: 'board',
         status: postForm.status,
         priority: postForm.priority,
         assignees: postForm.assignees,

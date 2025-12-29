@@ -30,7 +30,8 @@ export default function ProfilePage() {
 
   const handleSave = () => {
     if (currentUser) {
-      updateProfile(currentUser.id, formData);
+      const { role, ...updateData } = formData;
+      updateProfile(currentUser.id, updateData);
       setIsEditing(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);

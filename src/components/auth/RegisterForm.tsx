@@ -14,7 +14,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     name: '',
     phone: '',
     department: '',
-    role: '팀원',
+    role: 'member' as const,
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
