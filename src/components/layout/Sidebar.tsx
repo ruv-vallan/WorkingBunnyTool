@@ -338,25 +338,24 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-64 bg-sidebar-bg text-gray-300 flex flex-col h-screen">
+      <aside className="w-64 bg-gradient-to-b from-sidebar-bg to-[#0f0a14] text-gray-300 flex flex-col h-screen border-r border-sidebar-border">
         {/* Logo */}
-        <div className="p-4 border-b border-gray-700">
+        <div className="p-4 border-b border-sidebar-border">
           <Link to={isCurrentUserAdmin ? '/settings' : '/'} className="flex items-center group">
             {teamSettings.logo ? (
-              <img src={teamSettings.logo} alt="Logo" className="w-8 h-8 rounded mr-2" />
+              <img src={teamSettings.logo} alt="Logo" className="w-9 h-9 rounded-lg mr-3 shadow-glow-pink" />
             ) : (
               <div
-                className="w-8 h-8 rounded flex items-center justify-center text-white font-bold mr-2"
-                style={{ backgroundColor: teamSettings.primaryColor }}
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold mr-3 bg-gradient-to-br from-primary-500 to-accent-orange shadow-glow-pink"
               >
                 {teamSettings.name.charAt(0)}
               </div>
             )}
-            <h1 className="text-xl font-bold text-white group-hover:text-primary-300 transition-colors">
+            <h1 className="text-xl font-bold text-gradient-thermal group-hover:opacity-80 transition-opacity">
               {teamSettings.name}
             </h1>
             {isCurrentUserAdmin && (
-              <Edit2 className="w-3 h-3 ml-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <Edit2 className="w-3 h-3 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-primary-400" />
             )}
           </Link>
         </div>
@@ -368,13 +367,13 @@ export default function Sidebar() {
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center px-3 py-2 rounded-lg transition-all ${
                     location.pathname === item.path
-                      ? 'bg-sidebar-active text-white'
-                      : 'hover:bg-sidebar-hover'
+                      ? 'bg-sidebar-active text-white border-l-2 border-primary-500 shadow-[inset_0_0_20px_rgba(255,0,110,0.15)]'
+                      : 'hover:bg-sidebar-hover hover:shadow-[inset_0_0_15px_rgba(255,0,110,0.1)]'
                   }`}
                 >
-                  <item.icon className="w-5 h-5 mr-3" />
+                  <item.icon className={`w-5 h-5 mr-3 ${location.pathname === item.path ? 'text-primary-400' : ''}`} />
                   {item.label}
                 </Link>
               </li>
@@ -382,12 +381,12 @@ export default function Sidebar() {
             <li>
               <button
                 onClick={toggleMessenger}
-                className="flex items-center w-full px-3 py-2 rounded-lg transition-colors hover:bg-sidebar-hover"
+                className="flex items-center w-full px-3 py-2 rounded-lg transition-all hover:bg-sidebar-hover hover:shadow-[inset_0_0_15px_rgba(255,0,110,0.1)]"
               >
                 <MessageSquare className="w-5 h-5 mr-3" />
                 메신저
                 {unreadCount > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  <span className="ml-auto bg-gradient-to-r from-primary-500 to-accent-orange text-white text-xs px-2 py-0.5 rounded-full shadow-glow-pink">
                     {unreadCount}
                   </span>
                 )}
@@ -397,11 +396,11 @@ export default function Sidebar() {
 
           {/* Projects Section */}
           <div className="mt-6 px-2">
-            <div className="flex items-center justify-between px-3 py-2 text-sm text-gray-400">
-              <span>프로젝트</span>
+            <div className="flex items-center justify-between px-3 py-2 text-sm text-gray-500">
+              <span className="uppercase tracking-wider text-xs font-semibold">프로젝트</span>
               <button
                 onClick={() => setShowNewProjectInput(true)}
-                className="hover:text-white transition-colors"
+                className="hover:text-primary-400 transition-colors"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -422,7 +421,7 @@ export default function Sidebar() {
                     else setShowNewProjectInput(false);
                   }}
                   placeholder="프로젝트 이름"
-                  className="w-full px-2 py-1 bg-gray-700 rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  className="w-full px-2 py-1 bg-dark-card border border-sidebar-border rounded text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                   autoFocus
                 />
               </div>
@@ -468,8 +467,8 @@ export default function Sidebar() {
                       <ChevronRight className="w-4 h-4 mr-2" />
                     )}
                     <div
-                      className="w-3 h-3 rounded mr-2 flex-shrink-0"
-                      style={{ backgroundColor: project.color }}
+                      className="w-3 h-3 rounded-full mr-2 flex-shrink-0 shadow-lg"
+                      style={{ backgroundColor: project.color, boxShadow: `0 0 8px ${project.color}` }}
                     />
                     {editingProjectId === project.id ? (
                       <input
@@ -483,7 +482,7 @@ export default function Sidebar() {
                         }}
                         onBlur={finishEditingProject}
                         onClick={(e) => e.stopPropagation()}
-                        className="flex-1 bg-gray-700 rounded px-2 py-0.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        className="flex-1 bg-dark-card border border-sidebar-border rounded px-2 py-0.5 text-white text-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                       />
                     ) : (
                       <span className="flex-1 truncate">{project.name}</span>
@@ -557,30 +556,30 @@ export default function Sidebar() {
           <div className="px-2 pb-2">
             <Link
               to="/settings"
-              className={`flex items-center px-3 py-2 rounded-lg transition-colors ${
+              className={`flex items-center px-3 py-2 rounded-lg transition-all ${
                 location.pathname === '/settings'
-                  ? 'bg-sidebar-active text-white'
-                  : 'hover:bg-sidebar-hover'
+                  ? 'bg-sidebar-active text-white border-l-2 border-primary-500 shadow-[inset_0_0_20px_rgba(255,0,110,0.15)]'
+                  : 'hover:bg-sidebar-hover hover:shadow-[inset_0_0_15px_rgba(255,0,110,0.1)]'
               }`}
             >
-              <Settings className="w-5 h-5 mr-3" />
+              <Settings className={`w-5 h-5 mr-3 ${location.pathname === '/settings' ? 'text-primary-400' : ''}`} />
               설정
             </Link>
           </div>
         )}
 
         {/* User Section */}
-        <div className="border-t border-gray-700 p-4">
+        <div className="border-t border-sidebar-border p-4 bg-gradient-to-t from-[#0a0510] to-transparent">
           <div className="flex items-center justify-between">
-            <Link to="/profile" className="flex items-center flex-1 hover:bg-sidebar-hover rounded-lg p-2 -m-2">
+            <Link to="/profile" className="flex items-center flex-1 hover:bg-sidebar-hover rounded-lg p-2 -m-2 transition-all">
               {currentUser?.avatar ? (
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-8 h-8 rounded-full object-cover"
+                  className="w-9 h-9 rounded-full object-cover ring-2 ring-primary-500/30"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white font-medium">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-accent-orange flex items-center justify-center text-white font-medium shadow-glow-pink">
                   {currentUser?.name.charAt(0)}
                 </div>
               )}
@@ -588,7 +587,7 @@ export default function Sidebar() {
                 <p className="text-sm font-medium text-white truncate">
                   {currentUser?.name}
                 </p>
-                <p className="text-xs text-gray-400 truncate">
+                <p className="text-xs text-primary-400/70 truncate">
                   {currentUser?.role === 'admin' ? '관리자' :
                    currentUser?.role === 'manager' ? '매니저' :
                    currentUser?.role === 'member' ? '팀원' : '게스트'}
@@ -597,7 +596,7 @@ export default function Sidebar() {
             </Link>
             <button
               onClick={logout}
-              className="p-2 hover:bg-sidebar-hover rounded-lg transition-colors"
+              className="p-2 hover:bg-sidebar-hover rounded-lg transition-all hover:text-primary-400"
               title="로그아웃"
             >
               <LogOut className="w-5 h-5" />
@@ -614,8 +613,8 @@ export default function Sidebar() {
             onClick={() => setContextMenu(null)}
           />
           <div
-            className="fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[160px]"
-            style={{ top: contextMenu.y, left: contextMenu.x }}
+            className="fixed z-50 bg-dark-card rounded-lg shadow-xl border border-sidebar-border py-1 min-w-[160px] backdrop-blur-sm"
+            style={{ top: contextMenu.y, left: contextMenu.x, boxShadow: '0 4px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 0, 110, 0.1)' }}
           >
             <button
               onClick={() => {
@@ -628,9 +627,9 @@ export default function Sidebar() {
                   }
                 }
               }}
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="flex items-center w-full px-4 py-2 text-sm text-gray-300 hover:bg-sidebar-hover hover:text-white transition-colors"
             >
-              <Edit2 className="w-4 h-4 mr-2" />
+              <Edit2 className="w-4 h-4 mr-2 text-primary-400" />
               이름 변경
             </button>
             <button
@@ -638,7 +637,7 @@ export default function Sidebar() {
                 deleteProject(contextMenu.projectId);
                 setContextMenu(null);
               }}
-              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+              className="flex items-center w-full px-4 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
             >
               <Trash2 className="w-4 h-4 mr-2" />
               삭제

@@ -10,41 +10,142 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #f6f7fb;
+  background: linear-gradient(135deg, #0d0d12 0%, #1a0a1a 50%, #0d0d12 100%);
+  min-height: 100vh;
 }
 
+/* Thermal/Infrared scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #0a0a0f;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: linear-gradient(180deg, #ff006e 0%, #9b5de5 100%);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: linear-gradient(180deg, #ff4d94 0%, #b57edc 100%);
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-500 hover:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+    @apply bg-gradient-to-r from-primary-500 to-accent-orange text-white px-4 py-2 rounded-lg font-medium transition-all;
+    box-shadow: 0 0 15px rgba(255, 0, 110, 0.3);
+  }
+
+  .btn-primary:hover {
+    @apply from-primary-400 to-accent-orange;
+    box-shadow: 0 0 25px rgba(255, 0, 110, 0.5);
   }
 
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors;
+    @apply bg-dark-card border border-sidebar-border text-gray-300 px-4 py-2 rounded-lg font-medium transition-all hover:border-primary-500/50 hover:text-white;
   }
 
   .input-field {
-    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all;
+    @apply w-full px-4 py-2 bg-dark-card border border-dark-border rounded-lg text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500/50 outline-none transition-all;
   }
 
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-100;
+    @apply bg-dark-card rounded-xl border border-dark-border;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
+
+  .card-thermal {
+    @apply bg-dark-card rounded-xl border border-dark-border relative overflow-hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  .card-thermal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #ff006e, #ff6b35, #9b5de5, #00d4ff);
+  }
+
+  /* Thermal glow effects */
+  .glow-thermal {
+    box-shadow: 0 0 20px rgba(255, 0, 110, 0.3), 0 0 40px rgba(155, 93, 229, 0.2);
+  }
+
+  .text-gradient-thermal {
+    background: linear-gradient(135deg, #ff006e 0%, #ff6b35 50%, #00fff0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Sidebar specific styles */
+  .sidebar-item {
+    @apply flex items-center px-3 py-2 rounded-lg transition-all;
+  }
+
+  .sidebar-item:hover {
+    @apply bg-sidebar-hover;
+    box-shadow: inset 0 0 20px rgba(255, 0, 110, 0.1);
+  }
+
+  .sidebar-item-active {
+    @apply bg-sidebar-active border-l-2 border-primary-500;
+    box-shadow: inset 0 0 30px rgba(255, 0, 110, 0.15);
+  }
+
+  /* Thermal indicator */
+  .thermal-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff006e, #ff6b35);
+    box-shadow: 0 0 10px rgba(255, 0, 110, 0.6);
+  }
+
+  /* Status badges with thermal colors */
+  .badge-hot {
+    @apply px-2 py-0.5 rounded-full text-xs font-medium;
+    background: linear-gradient(135deg, #ff0040, #ff6b35);
+    color: white;
+  }
+
+  .badge-warm {
+    @apply px-2 py-0.5 rounded-full text-xs font-medium;
+    background: linear-gradient(135deg, #ff6b35, #ffb347);
+    color: white;
+  }
+
+  .badge-neutral {
+    @apply px-2 py-0.5 rounded-full text-xs font-medium;
+    background: linear-gradient(135deg, #9b5de5, #b57edc);
+    color: white;
+  }
+
+  .badge-cool {
+    @apply px-2 py-0.5 rounded-full text-xs font-medium;
+    background: linear-gradient(135deg, #00d4ff, #00fff0);
+    color: #0a0a0f;
+  }
+}
+
+/* Animation for thermal pulse */
+@keyframes thermal-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(255, 0, 110, 0.4);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 30px rgba(255, 0, 110, 0.6);
+  }
+}
+
+.animate-thermal-pulse {
+  animation: thermal-pulse 2s ease-in-out infinite;
 }
