@@ -189,6 +189,24 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
+      version: 2,
+      migrate: (persistedState: unknown, version: number) => {
+        const state = persistedState as AuthState;
+        if (version < 2) {
+          // 강제로 새 브랜딩으로 마이그레이션
+          return {
+            ...state,
+            teamSettings: {
+              id: 'team-1',
+              name: 'hopping.com',
+              logo: '/bbb_logo.svg',
+              primaryColor: '#ff006e',
+              createdAt: new Date(),
+            },
+          };
+        }
+        return state;
+      },
     }
   )
 );
