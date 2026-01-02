@@ -59,20 +59,31 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
     }
   };
 
+  const teamSettings = useAuthStore((state) => state.teamSettings);
+
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">계정 만들기</h1>
-        <p className="text-gray-600">TeamFlow에 가입하고 팀과 협업하세요</p>
+        <div className="flex justify-center mb-4">
+          {teamSettings.logo ? (
+            <img src={teamSettings.logo} alt="Logo" className="w-16 h-16 rounded-xl shadow-glow-pink" />
+          ) : (
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-500 to-accent-orange flex items-center justify-center text-white text-2xl font-bold shadow-glow-pink">
+              {teamSettings.name.charAt(0)}
+            </div>
+          )}
+        </div>
+        <h1 className="text-3xl font-bold text-gradient-thermal mb-2">계정 만들기</h1>
+        <p className="text-gray-400">{teamSettings.name}에 가입하고 팀과 협업하세요</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            이름 <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            이름 <span className="text-primary-400">*</span>
           </label>
           <div className="relative">
-            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="text"
               name="name"
@@ -85,11 +96,11 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            이메일 <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-gray-300 mb-1">
+            이메일 <span className="text-primary-400">*</span>
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="email"
               name="email"
@@ -103,11 +114,11 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              비밀번호 <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              비밀번호 <span className="text-primary-400">*</span>
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
@@ -119,18 +130,18 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-primary-400 transition-colors"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              비밀번호 확인 <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              비밀번호 확인 <span className="text-primary-400">*</span>
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="confirmPassword"
@@ -144,11 +155,11 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
             전화번호
           </label>
           <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="tel"
               name="phone"
@@ -161,11 +172,11 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
             부서
           </label>
           <div className="relative">
-            <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="text"
               name="department"
@@ -178,7 +189,7 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         </div>
 
         {error && (
-          <p className="text-red-500 text-sm">{error}</p>
+          <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
         )}
 
         <button type="submit" className="btn-primary w-full">
@@ -186,11 +197,11 @@ export default function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
         </button>
 
         <div className="text-center text-sm">
-          <span className="text-gray-600">이미 계정이 있으신가요?</span>{' '}
+          <span className="text-gray-500">이미 계정이 있으신가요?</span>{' '}
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-primary-600 hover:text-primary-700 font-medium"
+            className="text-primary-400 hover:text-primary-300 font-medium transition-colors"
           >
             로그인
           </button>
