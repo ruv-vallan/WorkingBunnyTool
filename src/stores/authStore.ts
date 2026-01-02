@@ -40,23 +40,23 @@ const adminPermissions: UserPermissions = {
 
 const defaultTeamSettings: TeamSettings = {
   id: 'team-1',
-  name: 'BUNNY SPACE',
+  name: 'hopping.com',
   logo: '/bbb_logo.svg',
-  primaryColor: '#0073ea',
+  primaryColor: '#ff006e',
   createdAt: new Date(),
 };
 
 const defaultUsers: User[] = [
   {
     id: 'admin-1',
-    email: 'admin@bunnyspace.com',
+    email: 'admin@hopping.com',
     password: 'admin123',
     name: '관리자',
     role: 'admin',
     phone: '010-1234-5678',
     avatar: '',
     department: '경영진',
-    bio: 'BunnySpace 관리자입니다.',
+    bio: 'hopping.com 관리자입니다.',
     createdAt: new Date(),
     permissions: adminPermissions,
   },
