@@ -10,6 +10,7 @@ export default function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFo
   const [email, setEmail] = useState('');
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const findPassword = useAuthStore((state) => state.findPassword);
+  const teamSettings = useAuthStore((state) => state.teamSettings);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,24 +35,33 @@ export default function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFo
     <div className="w-full max-w-md">
       <button
         onClick={onSwitchToLogin}
-        className="flex items-center text-gray-600 hover:text-gray-800 mb-6"
+        className="flex items-center text-gray-400 hover:text-primary-400 mb-6 transition-colors"
       >
         <ArrowLeft className="w-5 h-5 mr-1" />
         로그인으로 돌아가기
       </button>
 
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">비밀번호 찾기</h1>
-        <p className="text-gray-600">가입한 이메일을 입력하면 비밀번호를 알려드립니다</p>
+        <div className="flex justify-center mb-4">
+          {teamSettings.logo ? (
+            <img src={teamSettings.logo} alt="Logo" className="w-16 h-16 rounded-xl shadow-glow-pink" />
+          ) : (
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-500 to-accent-orange flex items-center justify-center text-white text-2xl font-bold shadow-glow-pink">
+              {teamSettings.name.charAt(0)}
+            </div>
+          )}
+        </div>
+        <h1 className="text-3xl font-bold text-gradient-thermal mb-2">비밀번호 찾기</h1>
+        <p className="text-gray-400">가입한 이메일을 입력하면 비밀번호를 알려드립니다</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-300 mb-1">
             이메일
           </label>
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="email"
               value={email}
@@ -63,7 +73,7 @@ export default function ForgotPasswordForm({ onSwitchToLogin }: ForgotPasswordFo
         </div>
 
         {result && (
-          <div className={`p-4 rounded-lg ${result.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+          <div className={`p-4 rounded-lg border ${result.success ? 'bg-accent-cyan/10 text-accent-cyan border-accent-cyan/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
             <p className="whitespace-pre-line">{result.message}</p>
           </div>
         )}
